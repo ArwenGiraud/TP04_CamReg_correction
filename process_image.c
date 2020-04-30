@@ -23,7 +23,7 @@ uint16_t extract_line_width(uint8_t *buffer){
 	uint8_t stop = 0, wrong_line = 0, line_not_found = 0;
 	uint32_t mean = 0;
 
-	static uint16_t last_width = PXTOCM/GOAL_DISTANCE; //ancienne distance est celle qu'on souhaite atteindre
+	//static uint16_t last_width = PXTOCM/GOAL_DISTANCE; //ancienne distance est celle qu'on souhaite atteindre
 
 	//performs an average
 	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++)
@@ -40,9 +40,9 @@ uint16_t extract_line_width(uint8_t *buffer){
 		{
 			//the slope must at least be WIDTH_SLOPE wide and is compared
 		    //to the mean of the image
-			//En fait, si on trouve une valeur en dessus de la moyenne et qu'à une dist WIDTH_SLOPE on
-			//en trouve une plus petite, on est en train de repéré notre obstacle
-		    if(buffer[i] > mean && buffer[i+WIDTH_SLOPE] < mean)
+			//En fait, si on trouve une valeur en dessous de la moyenne et qu'à une dist WIDTH_SLOPE on
+			//en trouve une plus grande, on est en train de repéré notre obstacle
+		    if(buffer[i] < mean && buffer[i+WIDTH_SLOPE] > mean)
 		    {
 		        begin = i;
 		        stop = 1; //du moment où cette condition est vrai, on arrête de chercher le début => stop=1
@@ -56,9 +56,9 @@ uint16_t extract_line_width(uint8_t *buffer){
 
 		    while(stop == 0 && i < IMAGE_BUFFER_SIZE)
 		    {
-		    	//si en i on est plus grand que la moyenne et en i-WIDTH_SLOPE on est plus petit alors on a
-		    	//trouvé la fin
-		        if(buffer[i] > mean && buffer[i-WIDTH_SLOPE] < mean)
+		    	//si en i on est plus petit que la moyenne et en i-WIDTH_SLOPE on est plus grand alors on a
+		    	//trouvé la fin => pour une ligne blanche
+		        if(buffer[i] < mean && buffer[i-WIDTH_SLOPE] > mean)
 		        {
 		            end = i;
 		            stop = 1;
@@ -337,7 +337,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//send_to_computer = !send_to_computer;
     }
 }
-
+*/
 float get_distance_cm(void)
 {
 	return distance_cm;
@@ -353,4 +353,4 @@ void process_image_start(void)
 	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);
 	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
 }
-*/
+

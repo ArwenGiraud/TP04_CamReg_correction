@@ -72,20 +72,15 @@ uint8_t type_obstacle = PAS_D_OBSTACLE;
 	for(uint8_t i = 0; i < NB_IR_SENSORS; i++)
 	{
 		ir_sensor[i] = get_prox(i);
+	}
 
-		//concerver la plus haute valeur
-		if(i=0)
+	//concerver la plus haute valeur
+	for(i = 0; i < (NB_IR_SENSORS-1); i++)
+	{
+		if(ir_sensor[i] > ir_sensor[i+1])
 		{
 			max_ir_value = ir_sensor[i];
 			ir_sensor_nb = i;
-		}
-		if(i>0)
-		{
-			if(ir_sensor[i] > ir_sensor[i-1])
-			{
-				max_ir_value = ir_sensor[i];
-				ir_sensor_nb = i;
-			}
 		}
 	}
 
