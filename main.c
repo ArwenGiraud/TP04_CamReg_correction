@@ -6,14 +6,9 @@
 #include "ch.h"
 #include "hal.h"
 #include "memory_protection.h"
-#include <stm32f4xx.h>
-#include <system_clock_config.h>
-#include <gpio.h>
-#include <timer.h>
 #include <usbcfg.h>
 #include <main.h>
 #include <motors.h>
-#include <gpio_motor.h>
 #include <camera/po8030.h>
 #include <chprintf.h>
 #include <i2c_bus.h>
@@ -25,6 +20,7 @@
 
 #include <pi_regulator.h>
 #include <process_image.h>
+#include <deplacement.h>
 
 //Pour utiliser le capteur de distances
 messagebus_t bus;
@@ -52,17 +48,9 @@ static void serial_start(void)
 
 int main(void)
 {
-	SystemClock_Config();
-
     halInit();
     chSysInit();
     mpu_init();
-
-    // Enable GPIOD peripheral clock
-    RCC->AHB1ENR    |= RCC_AHB1ENR_GPIOBEN | RCC_AHB1ENR_GPIODEN;
-
-    //config the timer with a given duty_cycle
-    timer4_PWM_start(0);
 
     //starts the serial communication
     serial_start();
@@ -73,18 +61,20 @@ int main(void)
 	po8030_start();
 	//inits the motors
 	motors_init();
-	gpio_motor_init();
 
 	//initialisation du capteur de distance
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
 
 	proximity_start();
 	VL53L0X_start();
-	//calibrate_ir();
+	calibrate_ir();
 
 	//stars the threads for the pi regulator and the processing of the image
 	//pi_regulator_start();
 	process_image_start();
+
+	chThdSleepMilliseconds(3000);
+	face_obstacle(17.2, 0);
 
     /* Infinite loop. */
     while (1) {
