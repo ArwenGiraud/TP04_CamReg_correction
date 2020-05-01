@@ -10,6 +10,7 @@
 #include <main.h>
 #include <motors.h>
 #include <camera/po8030.h>
+#include <audio/microphone.h>
 #include <chprintf.h>
 #include <i2c_bus.h>
 #include <sensors/imu.h>
@@ -19,20 +20,9 @@
 #include <spi_comm.h>
 
 //#include <pi_regulator.h>
+#include <audio_processing.h>
 #include <process_image.h>
 #include <deplacement.h>
-
-#define MAX_IR_VALUE	200
-#define NB_IR_SENSORS	8
-#define IR_20_RIGHT		0
-#define IR_50_RIGHT		1
-#define IR_90_RIGHT		2
-#define IR_160_RIGHT	3
-#define IR_160_LEFT		4
-#define IR_90_LEFT		5
-#define IR_50_LEFT		6
-#define IR_20_LEFT		7
-#define PAS_D_OBSTACLE 	0
 
 //Pour utiliser le capteur de distances
 messagebus_t bus;
@@ -46,6 +36,9 @@ CONDVAR_DECL(bus_condvar);
 //	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)data, size);
 //}
 
+//uncomment to use double buffering to send the FFT to the computer
+#define DOUBLE_BUFFERING
+
 static void serial_start(void)
 {
 	static SerialConfig ser_cfg = {
@@ -58,6 +51,22 @@ static void serial_start(void)
 	sdStart(&SD3, &ser_cfg); // UART3.
 }
 
+//static void timer12_start(void){
+//    //General Purpose Timer configuration
+//    //timer 12 is a 16 bit timer so we can measure time
+//    //to about 65ms with a 1Mhz counter
+//    static const GPTConfig gpt12cfg = {
+//        1000000,        /* 1MHz timer clock in order to measure uS.*/
+//        NULL,           /* Timer callback.*/
+//        0,
+//        0
+//    };
+//
+//    gptStart(&GPTD12, &gpt12cfg);
+//    //let the timer count to max value
+//    gptStartContinuous(&GPTD12, 0xFFFF);
+//}
+
 int main(void)
 {
     halInit();
@@ -68,11 +77,20 @@ int main(void)
     serial_start();
     //start the USB communication
     usb_start();
+    //starts timer 12
+    //timer12_start();
     //starts the camera
     dcmi_start();
 	po8030_start();
 	//inits the motors
 	motors_init();
+
+	//temp tab used to store values in complex_float format
+	//needed bx doFFT_c
+	//static complex_float temp_tab[FFT_SIZE];
+	//send_tab is used to save the state of the buffer to send (double buffering)
+	//to avoid modifications of the buffer while sending it
+	//static float send_tab[FFT_SIZE];
 
 	//initialisation du capteur de distance
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
@@ -82,50 +100,26 @@ int main(void)
 
 	//stars the threads for the pi regulator and the processing of the image
 	//pi_regulator_start();
-	process_image_start();
+	//process_image_start();
 
-	uint16_t ir_sensor[NB_IR_SENSORS] = {0};
-	uint8_t max_ir_value = 0;
-	uint8_t ir_sensor_nb = 0;
-	uint8_t type_obstacle = PAS_D_OBSTACLE;
+	//starts the microphones processing thread.
+	//it calls the callback given in parameter when samples are ready
+	mic_start(&processAudioData);
 
 	//waits 3 second
 	chThdSleepMilliseconds(3000);
 
-	right_motor_set_speed(300);
-	left_motor_set_speed(300);
+//	right_motor_set_speed(300);
+//	left_motor_set_speed(300);
 
     /* Infinite loop. */
     while (1)
     {
-    	//pour mettre les valeurs des IR dans le tableau et les transmettre à la fonction suivante
-		for(uint8_t i = 0; i < NB_IR_SENSORS; i++)
+    	if(!get_state())
 		{
-			ir_sensor[i] = get_prox(i);
+			left_motor_set_speed(0);
+			right_motor_set_speed(0);
 		}
-
-		max_ir_value = ir_sensor[IR_20_RIGHT];
-		ir_sensor_nb = IR_20_RIGHT;
-
-		//concerver la plus haute valeur
-		for(uint8_t i = 1; i < NB_IR_SENSORS; i++)
-		{
-			if(ir_sensor[i] > max_ir_value)
-			{
-				max_ir_value = ir_sensor[i];
-				ir_sensor_nb = i;
-			}
-		}
-
-	//vérification si l'une des valeurs est trop grande
-		if(max_ir_value > MAX_IR_VALUE)
-		{
-			lieu_obstacle(ir_sensor_nb);
-			//on peut facilement définir la taille de l'obstacle car on sait à quelle distance on en est
-			type_obstacle = taille_obstacle();
-			contourne_obstacle(type_obstacle);
-		}
-
 			//waits 1 second
 			//chThdSleepMilliseconds(1000);
 	}
