@@ -13,9 +13,9 @@
 
 //donne une valeur à chaque type d'ostacle: aucun, petit, moyen, mur
 #define PAS_D_OBSTACLE 	0
-#define PETIT_OBSTACLE	1
-#define MOYEN_OBSTACLE	2
-#define GRAND_OBSTACLE	3
+#define PETIT_OBSTACLE	1	//diamètre 2cm
+#define MOYEN_OBSTACLE	2	//diamètre 4cm
+#define GRAND_OBSTACLE	3	//mur
 
 //donne les valeur pour le sens de rotation
 #define CLOCKWISE			0
@@ -35,11 +35,11 @@
 #define IR_50_LEFT		6
 #define IR_20_LEFT		7
 
-//paramètres du moteur
+//paramètres du moteur et camera
 #define VITESSE_NORMALE		600
 #define VITESSE_LENTE		300
 #define ARRET				0
-#define ESPACE				3 //cm
+#define ESPACE				5 //cm
 #define PI                  3.1415926536f
 #define WHEEL_DISTANCE      5.5f    //cm
 #define PERIMETER_EPUCK     (PI * WHEEL_DISTANCE)
@@ -50,6 +50,9 @@
 #define ROT_R50		6		//7.2*50 = 360
 #define ROT_R90		3.5f	//4*90 = 360
 #define ROT_R160	1.6f	//2.25*160 = 360
+#define ROT_R180	1.5f
+
+static uint8_t contournement = 0;
 
 /*
 #define MAX_IR_VALUE	200
@@ -98,7 +101,7 @@ uint8_t type_obstacle = PAS_D_OBSTACLE;
 void lieu_obstacle(uint8_t ir_sensor_nb)//PENSER A VIRER LES MAGIC NUMBERS
 {
 	//je veux faire un switch case, pas sûr que ça marche bien...
-	/*
+
 	switch(ir_sensor_nb)
 	{
 		case IR_20_RIGHT:	face_obstacle(ROT_R20, CLOCKWISE);
@@ -118,92 +121,10 @@ void lieu_obstacle(uint8_t ir_sensor_nb)//PENSER A VIRER LES MAGIC NUMBERS
 		case IR_20_LEFT:	face_obstacle(ROT_R160, COUNTER_CLOCKWISE);
 							break;
 	}
-	 */
-	//se place face à l'ostacle et recule de 5cm pour pouvoir ensuite analyser l'ostacle
-	if(ir_sensor_nb == IR_20_RIGHT)
-	{
-		face_obstacle(ROT_R20, CLOCKWISE);
-	}
-	if(ir_sensor_nb == IR_50_RIGHT)
-	{
-		face_obstacle(ROT_R50, CLOCKWISE);
-	}
-	if(ir_sensor_nb == IR_90_RIGHT)
-	{
-		face_obstacle(ROT_R90, CLOCKWISE);
-	}
-	if(ir_sensor_nb == IR_160_RIGHT)
-	{
-		face_obstacle(ROT_R160, CLOCKWISE);
-	}
-	if(ir_sensor_nb == IR_20_LEFT)
-	{
-		face_obstacle(ROT_R20, COUNTER_CLOCKWISE);
-	}
-	if(ir_sensor_nb == IR_50_LEFT)
-	{
-		face_obstacle(ROT_R50, COUNTER_CLOCKWISE);
-	}
-	if(ir_sensor_nb == IR_90_LEFT)
-	{
-		face_obstacle(ROT_R90, COUNTER_CLOCKWISE);
-	}
-	if(ir_sensor_nb == IR_160_LEFT)
-	{
-		face_obstacle(ROT_R160, COUNTER_CLOCKWISE);
-	}
 }
 
 void face_obstacle(float facteur_rotatif, uint8_t sens)
 {
-	//idem switch case...
-	/*
-	uint32_t nb_steps = 0;
-	float distance = 0;
-	float goal = (PERIMETER_EPUCK/facteur_rotatif);
-
-	switch(sens)
-	{
-								//Rotation de (360/facteur_rotatif)° dans le sens horaire
-		case CLOCKWISE:			reset_motor_count();
-								right_motor_set_speed(-VITESSE_LENTE);
-								left_motor_set_speed(VITESSE_LENTE);
-
-								while(position < goal)
-								{
-									nb_steps = left_motor_get_pos();
-									position = ((nb_steps*PERIMETER_EPUCK)/NSTEP_ONE_TURN);
-								}
-
-								sens = RECULE;
-								break;
-								//Rotation de (360/facteur_rotatif)° dans le sens anti-horaire
-		case COUNTER_CLOCKWISE:	reset_motor_count();
-								right_motor_set_speed(VITESSE_LENTE);
-								left_motor_set_speed(-VITESSE_LENTE);
-
-								while(position < goal)
-								{
-									nb_steps = right_motor_get_pos();
-									position = ((nb_steps*PERIMETER_EPUCK)/NSTEP_ONE_TURN);
-								}
-
-								sens = RECULE;
-								break;
-								//recule de 3cm
-		case RECULE:			reset_motor_count();
-								position = 0;
-
-								right_motor_set_speed(-VITESSE_LENTE);
-								left_motor_set_speed(-VITESSE_LENTE);
-
-								while(position < ESPACE)
-								{
-									nb_steps = left_motor_get_pos();
-									position = ((nb_steps*PERIMETER_EPUCK)/NSTEP_ONE_TURN);
-								}
-	}
-	 */
 	//Etant donné qu'on ne cherche pas à compter les steps dans des situation ou on recule et on avance, j'ai modifié
 	//le code de motors qui incrémente tjr le compteur de steps.
 	uint32_t nb_steps = 0;
@@ -238,24 +159,56 @@ void face_obstacle(float facteur_rotatif, uint8_t sens)
 			position = ((nb_steps*PERIMETER_EPUCK)/NSTEP_ONE_TURN);
 		}
 	}
-	//recule de 3cm
-	reset_motor_count();
-	position = 0;
 
-	right_motor_set_speed(-VITESSE_LENTE);
-	left_motor_set_speed(-VITESSE_LENTE);
-
-	while(position < ESPACE)
+	if(!contournement)
 	{
-		nb_steps = left_motor_get_pos();
-		position = ((nb_steps*PERIMETER_EPUCK)/NSTEP_ONE_TURN);
+		//recule de 5cm
+		reset_motor_count();
+		position = 0;
+
+		right_motor_set_speed(-VITESSE_LENTE);
+		left_motor_set_speed(-VITESSE_LENTE);
+
+		while(position < ESPACE)
+		{
+			nb_steps = left_motor_get_pos();
+			position = ((nb_steps*PERIMETER_EPUCK)/NSTEP_ONE_TURN);
+		}
+	}
+	else if(contournement)
+	{
+		//avance de 5cm
+		reset_motor_count();
+		position = 0;
+
+		right_motor_set_speed(VITESSE_LENTE);
+		left_motor_set_speed(VITESSE_LENTE);
+
+		while(position < ESPACE)
+		{
+			nb_steps = left_motor_get_pos();
+			position = ((nb_steps*PERIMETER_EPUCK)/NSTEP_ONE_TURN);
+		}
 	}
 
 	right_motor_set_speed(ARRET);
 	left_motor_set_speed(ARRET);
 }
 
-uint16_t taille_obstacle(void)
+void contourne_obstacle(uint8_t type_obstacle)
 {
+	contournement = 1;
 
+	switch(type_obstacle)
+	{
+	case PETIT_OBSTACLE:	face_obstacle(ROT_R90, CLOCKWISE);
+							contournement = 0;
+							break;
+	case MOYEN_OBSTACLE:	face_obstacle(ROT_R90, COUNTER_CLOCKWISE);
+							contournement = 0;
+							break;
+	case GRAND_OBSTACLE:	face_obstacle(ROT_R180, CLOCKWISE);
+							contournement = 0;
+							break;
+	}
 }
