@@ -82,7 +82,7 @@ int main(void)
 
 	//stars the threads for the pi regulator and the processing of the image
 	//pi_regulator_start();
-	//process_image_start();
+	process_image_start();
 
 	uint16_t ir_sensor[NB_IR_SENSORS] = {0};
 	uint8_t max_ir_value = 0;
