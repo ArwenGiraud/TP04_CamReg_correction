@@ -27,18 +27,10 @@ extern "C" {
 #define KI 						3.5f	//must not be zero
 #define MAX_SUM_ERROR 			(MOTOR_SPEED_LIMIT/KI)
 
-#define BLACK		0
-#define ROUGE		1
-#define BLEU		2
-#define VERT		3
-#define BLACK_LIM	20
-
 /** Robot wide IPC bus. */
 extern messagebus_t bus;
 
 extern parameter_namespace_t parameter_root;
-
-void SendUint8ToComputer(uint8_t* data, uint16_t size);
 
 #ifdef __cplusplus
 }

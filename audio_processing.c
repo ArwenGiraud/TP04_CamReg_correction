@@ -174,7 +174,6 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 	*/
 	//chprintf((BaseSequentialStream *)&SD3, "je suis dans processAudioData");
 	static uint16_t nb_samples = 0;
-	static uint8_t mustSend = 0;
 	static float mag_max[NB_MIC] = {MIN_VALUE_THRESHOLD};
 	static float val_mag_max = 0;
 
@@ -182,11 +181,38 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 	static uint8_t active_mic_second = NO_SOUND;
 
 
-	uint16_t ir_sensor[NB_IR_SENSORS] = {0};
-	uint8_t max_ir_value = 0;
-	uint8_t ir_sensor_nb = 0;
-	uint8_t type_obstacle = PAS_D_OBSTACLE;
-
+//	uint16_t ir_sensor[NB_IR_SENSORS] = {0};
+//	uint8_t max_ir_value = 0;
+//	uint8_t ir_sensor_nb = 0;
+//	uint8_t type_obstacle = PAS_D_OBSTACLE;
+//
+//	//pour mettre les valeurs des IR dans le tableau et les transmettre à la fonction suivante
+//	for(uint8_t i = 0; i < NB_IR_SENSORS; i++)
+//	{
+//		ir_sensor[i] = get_prox(i);
+//	}
+//
+//	max_ir_value = ir_sensor[IR_20_RIGHT];
+//	ir_sensor_nb = IR_20_RIGHT;
+//
+//	//concerver la plus haute valeur
+//	for(uint8_t i = 1; i < NB_IR_SENSORS; i++)
+//	{
+//		if(ir_sensor[i] > max_ir_value)
+//		{
+//			max_ir_value = ir_sensor[i];
+//			ir_sensor_nb = i;
+//		}
+//	}
+//	//vérification si l'une des valeurs est trop grande
+//	if(max_ir_value > MAX_IR_VALUE)
+//	{
+//		lieu_obstacle(ir_sensor_nb);
+//		capture_image();
+//		//on peut facilement définir la taille de l'obstacle car on sait à quelle distance on en est
+//		type_obstacle = process_image();
+//		contourne_obstacle(type_obstacle);
+//	}
 
 	//loop to fill the buffers
 	for(uint16_t i = 0 ; i < num_samples ; i+=4)
@@ -225,7 +251,6 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 
 		doFFT_optimized(FFT_SIZE, micRight_cmplx_input);
 		doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
-		//doFFT_optimized(FFT_SIZE, micFront_cmplx_input);
 		doFFT_optimized(FFT_SIZE, micBack_cmplx_input);
 
 		/*	Magnitude processing
@@ -238,19 +263,8 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 		arm_cmplx_mag_f32(micRight_cmplx_input, micRight_output, FFT_SIZE);
 		arm_cmplx_mag_f32(micLeft_cmplx_input, micLeft_output, FFT_SIZE);
 		arm_cmplx_mag_f32(micBack_cmplx_input, micBack_output, FFT_SIZE);
-		//arm_cmplx_mag_f32(micFront_cmplx_input, micFront_output, FFT_SIZE);
 
-		//sends only one FFT result over 10 for 1 mic to not flood the computer
-		//sends to UART3
-		//if(mustSend > 8)
-		//{
-			//chprintf((BaseSequentialStream *)&SD3, "mustSend");
-			//signals to send the result to the computer
-			//chBSemSignal(&sendToComputer_sem);
-			//mustSend = 0;
-		//}
 		nb_samples = 0;
-		//mustSend++;
 
 		/*if (mode == MANUEL & COLLISION) //DEF COLLISION QQ PART
 		{
@@ -290,41 +304,9 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 				val_mag_max = mag_max[i];
 			}
 		}
-//		//pour mettre les valeurs des IR dans le tableau et les transmettre à la fonction suivante
-//		for(uint8_t i = 0; i < NB_IR_SENSORS; i++)
-//		{
-//			ir_sensor[i] = get_prox(i);
-//		}
-//
-//		max_ir_value = ir_sensor[IR_20_RIGHT];
-//		ir_sensor_nb = IR_20_RIGHT;
-//
-//		//concerver la plus haute valeur
-//		for(uint8_t i = 1; i < NB_IR_SENSORS; i++)
-//		{
-//			if(ir_sensor[i] > max_ir_value)
-//			{
-//				max_ir_value = ir_sensor[i];
-//				ir_sensor_nb = i;
-//			}
-//		}
-//		//vérification si l'une des valeurs est trop grande
-//		if(max_ir_value > MAX_IR_VALUE)
-//		{
-//			lieu_obstacle(ir_sensor_nb);
-//			//on peut facilement définir la taille de l'obstacle car on sait à quelle distance on en est
-//			type_obstacle = taille_obstacle();
-//			contourne_obstacle(type_obstacle);
-//		}
 		sound_remote(active_mic_first, active_mic_second);
 	}
 }
-
-//Attendre pour envoyer des tableaux complets
-//void wait_send_to_computer(void)
-//{
-	//chBSemWait(&sendToComputer_sem);
-//}
 
 //Obtenir les pointeurs sur les tableaux des micros
 //ENCORE UTILISEE?
