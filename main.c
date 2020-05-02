@@ -24,10 +24,24 @@
 #include <process_image.h>
 #include <deplacement.h>
 
+#define MAX_IR_VALUE	200
+#define NB_IR_SENSORS	8
+#define IR_20_RIGHT		0
+#define IR_50_RIGHT		1
+#define IR_90_RIGHT		2
+#define IR_160_RIGHT	3
+#define IR_160_LEFT		4
+#define IR_90_LEFT		5
+#define IR_50_LEFT		6
+#define IR_20_LEFT		7
+#define PAS_D_OBSTACLE 	0
+
 //Pour utiliser le capteur de distances
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
+
+//static bool analyse = false;
 
 //void SendUint8ToComputer(uint8_t* data, uint16_t size)
 //{
@@ -100,14 +114,20 @@ int main(void)
 
 	//stars the threads for the pi regulator and the processing of the image
 	//pi_regulator_start();
-	//process_image_start();
+	process_image_start();
 
 	//starts the microphones processing thread.
 	//it calls the callback given in parameter when samples are ready
 	mic_start(&processAudioData);
 
+
+//	uint16_t ir_sensor[NB_IR_SENSORS] = {0};
+//	uint8_t max_ir_value = 0;
+//	uint8_t ir_sensor_nb = 0;
+//	uint8_t type_obstacle = PAS_D_OBSTACLE;
+
 	//waits 3 second
-	chThdSleepMilliseconds(3000);
+	chThdSleepSeconds(3);
 
 //	right_motor_set_speed(300);
 //	left_motor_set_speed(300);
@@ -115,11 +135,42 @@ int main(void)
     /* Infinite loop. */
     while (1)
     {
-    	if(!get_state())
+    	if(!get_sound_state())	// && !analyse)
 		{
 			left_motor_set_speed(0);
 			right_motor_set_speed(0);
 		}
+
+//		//pour mettre les valeurs des IR dans le tableau et les transmettre à la fonction suivante
+//		for(uint8_t i = 0; i < NB_IR_SENSORS; i++)
+//		{
+//			ir_sensor[i] = get_prox(i);
+//		}
+//
+//		max_ir_value = ir_sensor[IR_20_RIGHT];
+//		ir_sensor_nb = IR_20_RIGHT;
+//
+//		//concerver la plus haute valeur
+//		for(uint8_t i = 1; i < NB_IR_SENSORS; i++)
+//		{
+//			if(ir_sensor[i] > max_ir_value)
+//			{
+//				max_ir_value = ir_sensor[i];
+//				ir_sensor_nb = i;
+//			}
+//		}
+//		//vérification si l'une des valeurs est trop grande
+//		if(max_ir_value > MAX_IR_VALUE)
+//		{
+//			analyse = true;
+//
+//			lieu_obstacle(ir_sensor_nb);
+//			//on peut facilement définir la taille de l'obstacle car on sait à quelle distance on en est
+//			type_obstacle = taille_obstacle();
+//			contourne_obstacle(type_obstacle);
+//
+//			analyse = false;
+//		}
 			//waits 1 second
 			//chThdSleepMilliseconds(1000);
 	}

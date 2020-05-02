@@ -75,6 +75,7 @@ static float micBack_output[FFT_SIZE];
 #define PAS_D_OBSTACLE 	0
 
 static uint8_t state = SOUND_OFF;
+static bool analyse = false;
 
 // Simple delay function
 void delay(unsigned int n)
@@ -164,7 +165,6 @@ void sound_manuel_remote(float* data)
 //appelle la fonction de commande des moteurs.
 void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 {
-
 	/*
 	*
 	*	We get 160 samples per mic every 10ms
@@ -172,7 +172,7 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 	*	1024 samples, then we compute the FFTs.
 	*
 	*/
-	//chprintf((BaseSequentialStream *)&SD3, "je suis dans processAudioData");
+
 	static uint16_t nb_samples = 0;
 	static uint8_t mustSend = 0;
 	static float mag_max[NB_MIC] = {MIN_VALUE_THRESHOLD};
@@ -181,12 +181,44 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 	static uint8_t active_mic_first = NO_SOUND;
 	static uint8_t active_mic_second = NO_SOUND;
 
-
 	uint16_t ir_sensor[NB_IR_SENSORS] = {0};
 	uint8_t max_ir_value = 0;
 	uint8_t ir_sensor_nb = 0;
 	uint8_t type_obstacle = PAS_D_OBSTACLE;
 
+	//pour mettre les valeurs des IR dans le tableau et les transmettre à la fonction suivante
+	for(uint8_t i = 0; i < NB_IR_SENSORS; i++)
+	{
+		ir_sensor[i] = get_prox(i);
+	}
+
+	max_ir_value = ir_sensor[IR_20_RIGHT];
+	ir_sensor_nb = IR_20_RIGHT;
+
+	//concerver la plus haute valeur
+	for(uint8_t i = 1; i < NB_IR_SENSORS; i++)
+	{
+		if(ir_sensor[i] > max_ir_value)
+		{
+			max_ir_value = ir_sensor[i];
+			ir_sensor_nb = i;
+		}
+	}
+	//vérification si l'une des valeurs est trop grande
+	if(max_ir_value > MAX_IR_VALUE)
+	{
+//		analyse = true;
+
+		lieu_obstacle(ir_sensor_nb);
+		//on peut facilement définir la taille de l'obstacle car on sait à quelle distance on en est
+		type_obstacle = 3;//get_taille_obstacle();
+		contourne_obstacle(type_obstacle);
+
+		//chThdSleepSeconds(5);
+
+//		analyse = false;
+
+	}
 
 	//loop to fill the buffers
 	for(uint16_t i = 0 ; i < num_samples ; i+=4)
@@ -216,7 +248,6 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 
 	if(nb_samples >= (2 * FFT_SIZE))
 	{
-		//chprintf((BaseSequentialStream *)&SD3, "premier if pour fft");
 		/*	FFT proccessing
 		*
 		*	This FFT function stores the results in the input buffer given.
@@ -290,32 +321,6 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 				val_mag_max = mag_max[i];
 			}
 		}
-//		//pour mettre les valeurs des IR dans le tableau et les transmettre à la fonction suivante
-//		for(uint8_t i = 0; i < NB_IR_SENSORS; i++)
-//		{
-//			ir_sensor[i] = get_prox(i);
-//		}
-//
-//		max_ir_value = ir_sensor[IR_20_RIGHT];
-//		ir_sensor_nb = IR_20_RIGHT;
-//
-//		//concerver la plus haute valeur
-//		for(uint8_t i = 1; i < NB_IR_SENSORS; i++)
-//		{
-//			if(ir_sensor[i] > max_ir_value)
-//			{
-//				max_ir_value = ir_sensor[i];
-//				ir_sensor_nb = i;
-//			}
-//		}
-//		//vérification si l'une des valeurs est trop grande
-//		if(max_ir_value > MAX_IR_VALUE)
-//		{
-//			lieu_obstacle(ir_sensor_nb);
-//			//on peut facilement définir la taille de l'obstacle car on sait à quelle distance on en est
-//			type_obstacle = taille_obstacle();
-//			contourne_obstacle(type_obstacle);
-//		}
 		sound_remote(active_mic_first, active_mic_second);
 	}
 }
@@ -400,7 +405,12 @@ void sound_remote(uint8_t active_mic_first, uint8_t active_mic_second)
 	}
 
 }
-uint8_t get_state(void)
+uint8_t get_sound_state(void)
 {
 	return state;
+}
+
+bool get_analyse_state(void)
+{
+	return analyse;
 }

@@ -22,7 +22,8 @@ float max_magnitude_freq(float* data);
 void sound_remote(uint8_t active_mic_first, uint8_t active_mic_second);
 void processAudioData(int16_t *data, uint16_t num_samples);//, int mode);
 void sound_manuel_remote(float* data);
-uint8_t get_state(void);
+uint8_t get_sound_state(void);
+bool get_analyse_state(void);
 
 /*
 *	put the invoking thread into sleep until it can process the audio datas
