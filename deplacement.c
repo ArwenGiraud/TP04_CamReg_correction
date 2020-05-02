@@ -9,7 +9,6 @@
 #include <deplacement.h>
 #include <main.h>
 #include <process_image.h>
-#include <pi_regulator.h>
 
 //donne une valeur à chaque type d'ostacle: aucun, petit, moyen, mur
 #define PAS_D_OBSTACLE 	0
@@ -53,50 +52,6 @@
 #define ROT_R180	1.5f
 
 static uint8_t contournement = 0;
-
-/*
-#define MAX_IR_VALUE	200
-#define NB_IR_SENSORS	8
-#define IR_20_RIGHT		0
-#define IR_50_RIGHT		1
-#define IR_90_RIGHT		2
-#define IR_160_RIGHT	3
-#define IR_160_LEFT		4
-#define IR_90_LEFT		5
-#define IR_50_LEFT		6
-#define IR_20_LEFT		7
-
-uint16_t ir_sensor[NB_IR_SENSORS] = {0};
-uint8_t max_ir_value = 0;
-uint8_t ir_sensor_nb = 0;
-uint8_t type_obstacle = PAS_D_OBSTACLE;
-
-//pour mettre les valeurs des IR dans le tableau et les transmettre à la fonction suivante
-	for(uint8_t i = 0; i < NB_IR_SENSORS; i++)
-	{
-		ir_sensor[i] = get_prox(i);
-	}
-
-	//concerver la plus haute valeur
-	for(i = 0; i < (NB_IR_SENSORS-1); i++)
-	{
-		if(ir_sensor[i] > ir_sensor[i+1])
-		{
-			max_ir_value = ir_sensor[i];
-			ir_sensor_nb = i;
-		}
-	}
-
-//vérification si l'une des valeurs est trop grande
-	if(max_ir_value > MAX_IR_VALUE)
-	{
-		lieu_obstacle(ir_sensor_nb);
-		//on peut facilement définir la taille de l'obstacle car on sait à quelle distance on en est
-		type_obstacle = taille_obstacle();
-		contourne_obstacle(type_obstacle);
-	}
-//Si ce if est faux, le robot reste dans la thread pour suivre le son
-*/
 
 void lieu_obstacle(uint8_t ir_sensor_nb)//PENSER A VIRER LES MAGIC NUMBERS
 {

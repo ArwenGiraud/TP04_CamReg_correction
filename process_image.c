@@ -25,13 +25,6 @@
 #define MOYEN_OBSTACLE	2	//diamètre 4cm
 #define GRAND_OBSTACLE	3	//mur
 
-static uint16_t lineWidth  = 0;
-static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	//middle
-
-//semaphore
-static BSEMAPHORE_DECL(image_ready_sem, TRUE);
-static BSEMAPHORE_DECL(placement_done_sem, TRUE);
-
 //Returns the line's width extracted from the image buffer given
 //Returns 0 if line not found
 uint16_t extract_line_width(uint8_t *buffer){
@@ -119,7 +112,6 @@ uint16_t extract_line_width(uint8_t *buffer){
 			width = last_width;
 		}else{
 			last_width = width = (end - begin);//la différence des i trouvés pour le début et la fin
-			line_position = (begin + end)/2; //gives the line position. (plutôt là où elle est centrée)
 		}
 
 		//sets a maximum width or returns the measured width
@@ -131,17 +123,8 @@ uint16_t extract_line_width(uint8_t *buffer){
 	}
 }
 
-static THD_WORKING_AREA(waCaptureImage, 256);
-static THD_FUNCTION(CaptureImage, arg) {
-
-    chRegSetThreadName(__FUNCTION__);
-    (void)arg;
-//void capture_image(void)
-//{
-    //Je veux faire un wait qui serait donné au moment où j'ai desoin de la caméra
-    chBSemWait(&placement_done_sem);
-
-    //bool ready = false;
+void capture_image(void)
+{
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 10 + 11 (minimum 2 lines because reasons)
 	po8030_advanced_config(FORMAT_RGB565, 0, 10, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
@@ -149,40 +132,23 @@ static THD_FUNCTION(CaptureImage, arg) {
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
 
-    while(1)//!ready)
-    {
+    //while(1)//!ready)
+    //{
         //starts a capture
 		dcmi_capture_start();
 		//waits for the capture to be done
 		wait_image_ready();
-		//ready = true;
-		//signals an image has been captured
-		chBSemSignal(&image_ready_sem);
-    }
+    //}
 }
 
-
-
-static THD_WORKING_AREA(waProcessImage, 1024);
-static THD_FUNCTION(ProcessImage, arg) {
-
-	chRegSetThreadName(__FUNCTION__);
-	(void)arg;
-//void process_image(void)
-//{
+uint8_t process_image(void)
+{
 	uint8_t *img_buff_ptr;
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
-	lineWidth = 0;
+	uint16_t lineWidth = 0;
 
-	//bool imready = false;
-	//bool send_to_computer = true;
-
-    while(1)//!imready)
-    {
-    	//waits until an image has been captured
-        chBSemWait(&image_ready_sem);
-        //imready = true;
-
+    //while(1)//!imready)
+    //{
 		//gets the pointer to the array filled with the last image in RGB565
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
@@ -200,47 +166,20 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//converts the width into a distance between the robot and the camera
 		if(!lineWidth)
 		{
-			lineWidth = ERROR;
+			return GRAND_OBSTACLE;
 		}
-
-//		if(send_to_computer){
-//			//sends to the computer the image
-//			SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
-//		}
-//		//invert the bool
-//		send_to_computer = !send_to_computer;
-    }
-}
-
-uint8_t taille_obstacle(void)
-{
-
-	//capture_image();
-	//process_image();
-
-	chBSemSignal(&placement_done_sem);
-
-	if(!lineWidth)
-	{
-		return GRAND_OBSTACLE;
-	}
-	else
-	{
-		if(lineWidth < MOYENNE)
+		else
 		{
-			return PETIT_OBSTACLE;
+			if(lineWidth < MOYENNE)
+			{
+				return PETIT_OBSTACLE;
+			}
+			else // if (largeur > MOYENNE)
+			{
+				return MOYEN_OBSTACLE;
+			}
 		}
-		else // if (largeur > MOYENNE)
-		{
-			return MOYEN_OBSTACLE;
-		}
-	}
-}
-
-void process_image_start(void)
-{
-    chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);
-    chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
+    //}
 }
 
 

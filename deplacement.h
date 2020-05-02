@@ -5,6 +5,5 @@ void lieu_obstacle(uint8_t ir_sensor_nb);
 uint8_t taille_obstacle(void);
 void contourne_obstacle(uint8_t type_obstacle);
 void face_obstacle(float facteur_rotatif, uint8_t sens);
-//void get_TOF_in_cm(void);
 
 #endif /* DEPLACEMENT_H */
