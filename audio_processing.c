@@ -74,6 +74,7 @@ static float micBack_output[FFT_SIZE];
 #define PAS_D_OBSTACLE 	0
 
 static uint8_t state = SOUND_OFF;
+static bool obstacle = false;
 
 // Simple delay function
 void delay(unsigned int n)
@@ -205,11 +206,15 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 	//vérification si l'une des valeurs est trop grande
 	if(max_ir_value > MAX_IR_VALUE)
 	{
+		obstacle = true;
+		//condition manuel/automatique
 		lieu_obstacle(ir_sensor_nb);
 		capture_image();
 		//on peut facilement définir la taille de l'obstacle car on sait à quelle distance on en est
-		//type_obstacle = process_image();
-		contourne_obstacle(2);
+		type_obstacle = process_image();
+		contourne_obstacle(type_obstacle);
+		//fréquence haute pour stop le mode manuel
+		obstacle = false;
 	}
 
 	//loop to fill the buffers

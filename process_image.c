@@ -163,6 +163,9 @@ uint8_t process_image(void)
 		//search for a line in the image and gets its width in pixels
 		lineWidth = extract_line_width(image);
 
+		//sends to the computer the image
+		SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
+
 		//converts the width into a distance between the robot and the camera
 		if(!lineWidth)
 		{
