@@ -179,7 +179,6 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 	static uint8_t active_mic_first = NO_SOUND;
 	static uint8_t active_mic_second = NO_SOUND;
 
-
 	uint16_t ir_sensor[NB_IR_SENSORS] = {0};
 	uint8_t max_ir_value = 0;
 	uint8_t ir_sensor_nb = 0;
