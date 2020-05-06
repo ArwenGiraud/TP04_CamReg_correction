@@ -33,25 +33,25 @@ static float micBack_output[FFT_SIZE];
 #define NO_SOUND			4	//4 car on regarde les micros 0-1-2-3
 #define REMOTE_FREQ			26 // 406 Hz
 
+#define REMOTE_FREQ_L		(REMOTE_FREQ-2)
 #define REMOTE_FREQ_H		(REMOTE_FREQ+3)
-#define REMOTE_FREQ_L		(REMOTE_FREQ-3)
 
 //Defines pour le mode manuel en collision
 #define MIN_FREQ			10	//we don't analyze before this index to not use resources for nothing
 #define MAX_FREQ			30	//we don't analyze after this index to not use resources for nothing
 
-#define MAN_FREQ_LEFT	12	//200Hz
-#define MAN_FREQ_RIGHT	16	//250Hz
-#define MAN_FREQ_BACK	20	//310HZ
+#define MAN_FREQ_LEFT	16	//200Hz
+#define MAN_FREQ_RIGHT	19	//250Hz
+#define MAN_FREQ_BACK	22	//310HZ
 #define MAN_FREQ_STOP	26	//406Hz
 
 #define MAN_FREQ_LEFT_L		(MAN_FREQ_LEFT-1)
-#define MAN_FREQ_LEFT_H		(MAN_FREQ_LEFT+2)
+#define MAN_FREQ_LEFT_H		(MAN_FREQ_LEFT+1)
 #define MAN_FREQ_RIGHT_L	(MAN_FREQ_RIGHT-1)
-#define MAN_FREQ_RIGHT_H	(MAN_FREQ_RIGHT+2)
+#define MAN_FREQ_RIGHT_H	(MAN_FREQ_RIGHT+1)
 #define MAN_FREQ_BACK_L		(MAN_FREQ_BACK-1)
-#define MAN_FREQ_BACK_H		(MAN_FREQ_BACK+2)
-#define MAN_FREQ_STOP_L		(MAN_FREQ_STOP-3)
+#define MAN_FREQ_BACK_H		(MAN_FREQ_BACK+1)
+#define MAN_FREQ_STOP_L		(MAN_FREQ_STOP-2)
 #define MAN_FREQ_STOP_H		(MAN_FREQ_STOP+3)
 
 #define SOUND_OFF	0
@@ -79,8 +79,7 @@ float max_magnitude_define(float* data, uint8_t freqMin, uint8_t freqMax)
 	float max_norm = MIN_VALUE_THRESHOLD;
 	int16_t max_norm_index = -1;
 
-	//Cherche la valeur de la magnitude pour environ 406 Hz
-	for(uint16_t i = freqMin ; i <= freqMax ; i++) //CHERCHE POUR UNE FREQ DE 406 Hz
+	for(uint16_t i = freqMin ; i <= freqMax ; i++)
 	{
 		if(data[i] > max_norm)
 		{
@@ -186,31 +185,43 @@ bool sound_manuel_remote(void)
 {
 	int16_t max_norm_index = max_magnitude_define(micRight_output, MIN_FREQ, MAX_FREQ);
 
-	//tourne à gauche entre environ 172Hz et 218Hz
-	if(max_norm_index >= MAN_FREQ_LEFT_L && max_norm_index <= MAN_FREQ_LEFT_H){
+	//tourne à gauche à environ 250Hz
+	if(max_norm_index >= MAN_FREQ_LEFT_L && max_norm_index <= MAN_FREQ_LEFT_H)
+	{
 		left_motor_set_speed(-VITESSE_NORMALE);
 		right_motor_set_speed(VITESSE_NORMALE);
 		return true;
 	}
-	//tourne à droite entre environ 234Hz et 281Hz
-	else if(max_norm_index >= MAN_FREQ_RIGHT_L && max_norm_index <= MAN_FREQ_RIGHT_H){
+	//tourne à droite à environ 300Hz
+	else if(max_norm_index >= MAN_FREQ_RIGHT_L && max_norm_index <= MAN_FREQ_RIGHT_H)
+	{
 		left_motor_set_speed(VITESSE_NORMALE);
 		right_motor_set_speed(-VITESSE_NORMALE);
 		return true;
 	}
-	//recule entre environ 297Hz et 343Hz
-	else if(max_norm_index >= MAN_FREQ_BACK_L && max_norm_index <= MAN_FREQ_BACK_H){
+	//recule à environ 350Hz
+	else if(max_norm_index >= MAN_FREQ_BACK_L && max_norm_index <= MAN_FREQ_BACK_H)
+	{
 		left_motor_set_speed(-VITESSE_NORMALE);
 		right_motor_set_speed(-VITESSE_NORMALE);
 		return true;
 	}
 	//stop si on est dans la tranche où en mode normal il bouge
-	else if(max_norm_index >= MAN_FREQ_STOP_L && max_norm_index <= MAN_FREQ_STOP_H){
+	else if(max_norm_index >= MAN_FREQ_STOP_L && max_norm_index <= MAN_FREQ_STOP_H)
+	{
 		left_motor_set_speed(0);
 		right_motor_set_speed(0);
 		return true;
 	}
-	else{
+	//pas de son => s'arrête mais ne rend pas la main au mode normal
+	else if(max_norm_index < MAN_FREQ_LEFT_L)
+	{
+		left_motor_set_speed(0);
+		right_motor_set_speed(0);
+		return true;
+	}
+	else
+	{
 		left_motor_set_speed(0);
 		right_motor_set_speed(0);
 		return false;
