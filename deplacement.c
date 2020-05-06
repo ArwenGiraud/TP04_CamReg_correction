@@ -5,7 +5,6 @@
 
 #include <motors.h>
 #include <sensors/VL53L0X/VL53L0X.h>
-#include <sensors/proximity.h>
 
 #include <main.h>
 #include <deplacement.h>
@@ -169,7 +168,6 @@ static THD_FUNCTION(Deplacement, arg) {
 				contourne_obstacle(taille_obstacle);
 				break;
 			}
-			// 100Hz
 			chThdSleepUntilWindowed(time, time + MS2ST(10));
 		}
 }

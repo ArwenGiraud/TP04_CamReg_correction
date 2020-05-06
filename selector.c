@@ -28,32 +28,14 @@ uint8_t get_selector_mode(void)
     uint8_t mode = NORMAL;
 	selector = gpio_read(Sel0) + 2 * gpio_read(Sel1) + 4 * gpio_read(Sel2) + 8 * gpio_read(Sel3);
 
-//-> état du selecteur? -> appelle la fonction en manuel ou auto
-        //(qui doivent avoir un break ou autre pour revenir au main quand fini --> comment sortir du mode manuel)
-    if (selector != old_selector)
-   	{
-    	//sequence_pos = 0;
-    	//gpio_set(LED1);
-   		//gpio_set(LED3);
-   		//gpio_set(LED5);
-   	}
     old_selector = selector;
     switch (selector)
    	{
     	case 0:
-    		//automatique
-    		//appelle fonctions automatiques en fonction du capteur prox + led pour automatique? (apelle pas de fonction
-    	    //du tout de son)
     		mode = MANUEL;
-   			//gpio_clear(LED3);
        		break;
-    	case 1: //manuel
-	     		//appelle audio processing en mode manuel + led pour manuel?
-    		//gpio_clear(LED5);
+    	case 1:
     		mode = AUTOMATIQUE;
-    		break;
-    	default:
-    		//SI AUCUN MODE SELECTIONNE -> ALLUMER TOUTES LES LEDS ? GENRE PB?
     		break;
     }
     return mode;

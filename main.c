@@ -7,16 +7,12 @@
 #include <string.h>
 #include <math.h>
 #include <usbcfg.h>
-#include <spi_comm.h>
-#include <i2c_bus.h>
 #include <chprintf.h>
 #include <stm32f4xx.h>
 
 #include <motors.h>
 #include <camera/po8030.h>
 #include <audio/microphone.h>
-#include <sensors/imu.h>
-#include <sensors/mpu9250.h>
 #include <sensors/VL53L0X/VL53L0X.h>
 
 #include <main.h>
@@ -26,11 +22,6 @@
 #include <selector.h>
 #include <gpio.h>
 #include <fft.h>
-
-//Pour utiliser le capteur de distances
-messagebus_t bus;
-MUTEX_DECL(bus_lock);
-CONDVAR_DECL(bus_condvar);
 
 static void serial_start(void)
 {
@@ -64,9 +55,6 @@ int main(void)
 
 	//init le selecteur
 	init_selector();
-
-	//initialisation du capteur de distance
-	messagebus_init(&bus, &bus_lock, &bus_condvar);
 
 	VL53L0X_start();
 

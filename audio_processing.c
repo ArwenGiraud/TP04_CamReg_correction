@@ -209,21 +209,21 @@ bool sound_manuel_remote(void)
 	//stop si on est dans la tranche où en mode normal il bouge
 	else if(max_norm_index >= MAN_FREQ_STOP_L && max_norm_index <= MAN_FREQ_STOP_H)
 	{
-		left_motor_set_speed(0);
-		right_motor_set_speed(0);
+		left_motor_set_speed(ARRET);
+		right_motor_set_speed(ARRET);
 		return true;
 	}
 	//pas de son => s'arrête mais ne rend pas la main au mode normal
 	else if(max_norm_index < MAN_FREQ_LEFT_L)
 	{
-		left_motor_set_speed(0);
-		right_motor_set_speed(0);
+		left_motor_set_speed(ARRET);
+		right_motor_set_speed(ARRET);
 		return true;
 	}
 	else
 	{
-		left_motor_set_speed(0);
-		right_motor_set_speed(0);
+		left_motor_set_speed(ARRET);
+		right_motor_set_speed(ARRET);
 		return false;
 	}
 }
