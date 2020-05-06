@@ -21,8 +21,8 @@
 #define MOYENNE				((RAPPORT2CM + RAPPORT3CM)/2)	//321.9pxl
 
 #define PAS_D_OBSTACLE 	0
-#define PETIT_OBSTACLE	1	//diamètre 2cm
-#define MOYEN_OBSTACLE	2	//diamètre 4cm
+#define PETIT_OBSTACLE	1	//largeur 1cm
+#define MOYEN_OBSTACLE	2	//largeur 3cm
 #define GRAND_OBSTACLE	3	//mur
 
 //Returns the line's width extracted from the image buffer given
