@@ -3,11 +3,10 @@
 #include <chprintf.h>
 #include <usbcfg.h>
 
-#include <main.h>
 #include <camera/po8030.h>
 #include <sensors/VL53L0X/VL53L0X.h>
-#include <sensors/proximity.h>
 
+#include <main.h>
 #include <process_image.h>
 #include <audio_processing.h>
 

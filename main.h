@@ -9,7 +9,6 @@ extern "C" {
 #include "msgbus/messagebus.h"
 #include "parameter/parameter.h"
 #include "sensors/VL53L0X/VL53L0X.h"
-#include "sensors/proximity.h"
 
 //constants for the differents parts of the project
 #define IMAGE_BUFFER_SIZE		640

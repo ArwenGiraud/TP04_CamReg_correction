@@ -1,11 +1,11 @@
 #include "ch.h"
 #include "hal.h"
-#include <main.h>
 #include <math.h>
-#include <fft.h>
-
 #include <arm_math.h>
 #include <arm_const_structs.h>
+
+#include <main.h>
+#include <fft.h>
 
 /*
 *	Wrapper to call a very optimized fft function provided by ARM
