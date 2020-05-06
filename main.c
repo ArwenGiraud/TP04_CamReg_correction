@@ -10,6 +10,7 @@
 #include <spi_comm.h>
 #include <i2c_bus.h>
 #include <chprintf.h>
+#include <stm32f4xx.h>
 
 #include <motors.h>
 #include <camera/po8030.h>
@@ -22,6 +23,9 @@
 #include <audio_processing.h>
 #include <process_image.h>
 #include <deplacement.h>
+#include <selector.h>
+#include <gpio.h>
+#include <fft.h>
 
 //Pour utiliser le capteur de distances
 messagebus_t bus;
@@ -57,6 +61,9 @@ int main(void)
 
 	//inits the motors
 	motors_init();
+
+	//init le selecteur
+	init_selector();
 
 	//initialisation du capteur de distance
 	messagebus_init(&bus, &bus_lock, &bus_condvar);

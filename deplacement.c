@@ -11,6 +11,7 @@
 #include <deplacement.h>
 #include <process_image.h>
 #include <audio_processing.h>
+#include <selector.h>
 
 //donne une valeur à chaque type d'ostacle: aucun, petit, moyen, mur
 #define ERREUR 	0
@@ -24,7 +25,6 @@
 #define RECULE				2
 
 //paramètres du moteur et camera
-#define VITESSE_NORMALE		600
 #define VITESSE_LENTE		300
 #define ARRET				0
 #define ESPACE				4 //cm
@@ -38,8 +38,10 @@
 #define ROT_R180	1.5f
 
 #define NORMAL			0
-#define OBSTACLE_AUTO	1
-#define OBSTACLE_MAN	2
+#define OBSTACLE_MAN	1
+#define OBSTACLE_AUTO	2
+
+static bool guidage = false;
 
 void recule(void)
 {
@@ -137,13 +139,17 @@ static THD_FUNCTION(Deplacement, arg) {
 			time = chVTGetSystemTime();
 
 			uint16_t dist_mm = VL53L0X_get_dist_mm();
+			uint8_t selector = get_selector_mode();
 
-			if(dist_mm < 50) //&& selector_get_mode == AUTOMATIQUE
+			if((dist_mm < 50) && (selector == OBSTACLE_AUTO))
 			{
 				mode = OBSTACLE_AUTO;
 			}
-			//else if(dist_mm < 50) //&& selector_get_mode == MANUEL
-			//{mode = OBSTACLE_MAN;}
+			else if(((dist_mm < 50) || guidage) && (selector == OBSTACLE_MAN))
+			{
+				guidage = true;
+				mode = OBSTACLE_MAN;
+			}
 			else
 			{
 				mode = NORMAL;
@@ -154,14 +160,14 @@ static THD_FUNCTION(Deplacement, arg) {
 			case NORMAL:
 				sound_remote();
 				break;
+			case OBSTACLE_MAN:
+				guidage = sound_manuel_remote();
+				break;
 			case OBSTACLE_AUTO:
 				recule();
 				taille_obstacle = get_taille_obstacle();
 				contourne_obstacle(taille_obstacle);
 				break;
-			//case OBSTACLE_MAN:
-				//sound_manual_remote();
-				//break;
 			}
 			// 100Hz
 			chThdSleepUntilWindowed(time, time + MS2ST(10));
