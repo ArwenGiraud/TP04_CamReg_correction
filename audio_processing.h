@@ -19,10 +19,11 @@ typedef enum {
 
 
 float max_magnitude_freq(float* data);
-void sound_remote(uint8_t active_mic_first, uint8_t active_mic_second);
+void sound_remote(void);
 void processAudioData(int16_t *data, uint16_t num_samples);//, int mode);
 void sound_manuel_remote(float* data);
 uint8_t get_state(void);
+//void get_obstacle_present_sem(void);
 
 /*
 *	Returns the pointer to the BUFFER_NAME_t buffer asked

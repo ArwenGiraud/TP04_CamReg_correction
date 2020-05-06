@@ -6,12 +6,14 @@
 #include <motors.h>
 #include <sensors/VL53L0X/VL53L0X.h>
 #include <sensors/proximity.h>
-#include <deplacement.h>
+
 #include <main.h>
+#include <deplacement.h>
 #include <process_image.h>
+#include <audio_processing.h>
 
 //donne une valeur à chaque type d'ostacle: aucun, petit, moyen, mur
-#define PAS_D_OBSTACLE 	0
+#define ERREUR 	0
 #define PETIT_OBSTACLE	1	//diamètre 2cm
 #define MOYEN_OBSTACLE	2	//diamètre 4cm
 #define GRAND_OBSTACLE	3	//mur
@@ -21,64 +23,42 @@
 #define COUNTER_CLOCKWISE	1
 #define RECULE				2
 
-//donner une valeur pour chaque senseur IR + définir leurs paramètres de fonctionnement
-//20 = à 20°, 45 = à 45° et 90 = à 90°
-#define MAX_IR_VALUE	200
-#define NB_IR_SENSORS	8
-#define IR_20_RIGHT		0
-#define IR_50_RIGHT		1
-#define IR_90_RIGHT		2
-#define IR_160_RIGHT	3
-#define IR_160_LEFT		4
-#define IR_90_LEFT		5
-#define IR_50_LEFT		6
-#define IR_20_LEFT		7
-
 //paramètres du moteur et camera
 #define VITESSE_NORMALE		600
 #define VITESSE_LENTE		300
 #define ARRET				0
-#define ESPACE				5 //cm
+#define ESPACE				4 //cm
 #define PI                  3.1415926536f
 #define WHEEL_DISTANCE      5.5f    //cm
 #define PERIMETER_EPUCK     (PI * WHEEL_DISTANCE)
 #define NSTEP_ONE_TURN		1000
 
 //facteur rotatif pour placement => théorie != expérience. Facteurs trouvés expérimentalement
-#define ROT_R20		17.2f	//18*20 = 360
-#define ROT_R50		6		//7.2*50 = 360
 #define ROT_R90		3.5f	//4*90 = 360
-#define ROT_R160	1.6f	//2.25*160 = 360
 #define ROT_R180	1.5f
 
-static uint8_t contournement = 0;
+#define NORMAL			0
+#define OBSTACLE_AUTO	1
+#define OBSTACLE_MAN	2
 
-void lieu_obstacle(uint8_t ir_sensor_nb)//PENSER A VIRER LES MAGIC NUMBERS
+void recule(void)
 {
-	//je veux faire un switch case, pas sûr que ça marche bien...
+	uint32_t nb_steps = 0;
+	reset_motor_count();
+	float position = 0;
 
-	switch(ir_sensor_nb)
+	//recule de 5cm
+	right_motor_set_speed(-VITESSE_LENTE);
+	left_motor_set_speed(-VITESSE_LENTE);
+
+	while(position < ESPACE)
 	{
-		case IR_20_RIGHT:	face_obstacle(ROT_R20, CLOCKWISE);
-							break;
-		case IR_50_RIGHT:	face_obstacle(ROT_R50, CLOCKWISE);
-							break;
-		case IR_90_RIGHT:	face_obstacle(ROT_R90, CLOCKWISE);
-							break;
-		case IR_160_RIGHT:	face_obstacle(ROT_R160, CLOCKWISE);
-							break;
-		case IR_160_LEFT:	face_obstacle(ROT_R20, COUNTER_CLOCKWISE);
-							break;
-		case IR_90_LEFT:	face_obstacle(ROT_R50, COUNTER_CLOCKWISE);
-							break;
-		case IR_50_LEFT:	face_obstacle(ROT_R90, COUNTER_CLOCKWISE);
-							break;
-		case IR_20_LEFT:	face_obstacle(ROT_R160, COUNTER_CLOCKWISE);
-							break;
+		nb_steps = left_motor_get_pos();
+		position = ((nb_steps*PERIMETER_EPUCK)/NSTEP_ONE_TURN);
 	}
 }
 
-void face_obstacle(float facteur_rotatif, uint8_t sens)
+void tourne(float facteur_rotatif, uint8_t sens)
 {
 	//Etant donné qu'on ne cherche pas à compter les steps dans des situation ou on recule et on avance, j'ai modifié
 	//le code de motors qui incrémente tjr le compteur de steps.
@@ -100,7 +80,7 @@ void face_obstacle(float facteur_rotatif, uint8_t sens)
 			position = ((nb_steps*PERIMETER_EPUCK)/NSTEP_ONE_TURN);
 		}
 	}
-	if(sens == COUNTER_CLOCKWISE)
+	else if(sens == COUNTER_CLOCKWISE)
 	{
 		//Rotation de (360/facteur_rotatif)° dans le sens anti-horaire
 		reset_motor_count();
@@ -115,55 +95,80 @@ void face_obstacle(float facteur_rotatif, uint8_t sens)
 		}
 	}
 
-	if(!contournement)
-	{
-		//recule de 5cm
-		reset_motor_count();
-		position = 0;
-
-		right_motor_set_speed(-VITESSE_LENTE);
-		left_motor_set_speed(-VITESSE_LENTE);
-
-		while(position < ESPACE)
-		{
-			nb_steps = left_motor_get_pos();
-			position = ((nb_steps*PERIMETER_EPUCK)/NSTEP_ONE_TURN);
-		}
-	}
-	else if(contournement)
-	{
-		//avance de 5cm
-		reset_motor_count();
-		position = 0;
-
-		right_motor_set_speed(VITESSE_LENTE);
-		left_motor_set_speed(VITESSE_LENTE);
-
-		while(position < ESPACE)
-		{
-			nb_steps = left_motor_get_pos();
-			position = ((nb_steps*PERIMETER_EPUCK)/NSTEP_ONE_TURN);
-		}
-	}
-
 	right_motor_set_speed(ARRET);
 	left_motor_set_speed(ARRET);
 }
 
 void contourne_obstacle(uint8_t type_obstacle)
 {
-	contournement = 1;
-
 	switch(type_obstacle)
 	{
-	case PETIT_OBSTACLE:	face_obstacle(ROT_R90, CLOCKWISE);
-							contournement = 0;
-							break;
-	case MOYEN_OBSTACLE:	face_obstacle(ROT_R90, COUNTER_CLOCKWISE);
-							contournement = 0;
-							break;
-	case GRAND_OBSTACLE:	face_obstacle(ROT_R180, CLOCKWISE);
-							contournement = 0;
-							break;
+	case ERREUR:
+		right_motor_set_speed(ARRET);
+		left_motor_set_speed(ARRET);
+		break;
+	case PETIT_OBSTACLE:
+		tourne(ROT_R90, CLOCKWISE);
+		break;
+	case MOYEN_OBSTACLE:
+		tourne(ROT_R90, COUNTER_CLOCKWISE);
+		break;
+	case GRAND_OBSTACLE:
+		tourne(ROT_R180, CLOCKWISE);
+		break;
 	}
+}
+
+static THD_WORKING_AREA(waDeplacement, 1024);
+static THD_FUNCTION(Deplacement, arg) {
+
+	chRegSetThreadName(__FUNCTION__);
+	(void)arg;
+
+	systime_t time;
+	uint16_t taille_obstacle = 0;
+	uint8_t mode = NORMAL;
+
+	// Pour initialisation plus fiable
+	chThdSleepMilliseconds(300);
+
+		while(1)
+		{
+			time = chVTGetSystemTime();
+
+			uint16_t dist_mm = VL53L0X_get_dist_mm();
+
+			if(dist_mm < 50) //&& selector_get_mode == AUTOMATIQUE
+			{
+				mode = OBSTACLE_AUTO;
+			}
+			//else if(dist_mm < 50) //&& selector_get_mode == MANUEL
+			//{mode = OBSTACLE_MAN;}
+			else
+			{
+				mode = NORMAL;
+			}
+
+			switch(mode)
+			{
+			case NORMAL:
+				sound_remote();
+				break;
+			case OBSTACLE_AUTO:
+				recule();
+				taille_obstacle = get_taille_obstacle();
+				contourne_obstacle(taille_obstacle);
+				break;
+			//case OBSTACLE_MAN:
+				//sound_manual_remote();
+				//break;
+			}
+			// 100Hz
+			chThdSleepUntilWindowed(time, time + MS2ST(10));
+		}
+}
+
+void deplacement_start(void)
+{
+	chThdCreateStatic(waDeplacement, sizeof(waDeplacement), NORMALPRIO+1, Deplacement, NULL);
 }

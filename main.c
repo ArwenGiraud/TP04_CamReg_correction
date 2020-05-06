@@ -1,23 +1,24 @@
+#include "ch.h"
+#include "hal.h"
+#include "memory_protection.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
-#include "ch.h"
-#include "hal.h"
-#include "memory_protection.h"
 #include <usbcfg.h>
-#include <main.h>
+#include <spi_comm.h>
+#include <i2c_bus.h>
+#include <chprintf.h>
+
 #include <motors.h>
 #include <camera/po8030.h>
 #include <audio/microphone.h>
-#include <chprintf.h>
-#include <i2c_bus.h>
 #include <sensors/imu.h>
 #include <sensors/mpu9250.h>
-#include <sensors/proximity.h>
-#include <spi_comm.h>
+#include <sensors/VL53L0X/VL53L0X.h>
 
+#include <main.h>
 #include <audio_processing.h>
 #include <process_image.h>
 #include <deplacement.h>
@@ -26,13 +27,6 @@
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
-
-void SendUint8ToComputer(uint8_t* data, uint16_t size)
-{
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&size, sizeof(uint16_t));
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)data, size);
-}
 
 static void serial_start(void)
 {
@@ -60,21 +54,21 @@ int main(void)
     //starts the camera
     dcmi_start();
 	po8030_start();
+
 	//inits the motors
 	motors_init();
 
 	//initialisation du capteur de distance
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
 
-	proximity_start();
-	calibrate_ir();
+	VL53L0X_start();
+
+	process_image_start();
+	deplacement_start();
 
 	//starts the microphones processing thread.
 	//it calls the callback given in parameter when samples are ready
 	mic_start(&processAudioData);
-
-	//waits 3 second
-	chThdSleepMilliseconds(3000);
 
     /* Infinite loop. */
     while (1)

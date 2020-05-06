@@ -1,22 +1,18 @@
 #include "ch.h"
 #include "hal.h"
-#include <main.h>
 #include <usbcfg.h>
 #include <chprintf.h>
+#include <arm_math.h>
 
 #include <motors.h>
 #include <audio/microphone.h>
 #include <audio_processing.h>
-//#include <communications.h>
+#include <sensors/VL53L0X/VL53L0X.h>
+
+#include <main.h>
 #include <deplacement.h>
 #include <process_image.h>
 #include <fft.h>
-#include <arm_math.h>
-
-//semaphore permet d'assurer l'unicité de l'accès à l'information => sémaphore binaire soit libre soit bloquée
-//lorsque bloquée on voit le nombre de processus en attente. Dans une sémaphore pas de notion de priorité
-//Cette sémaphore permet d'assurer qu'une seul chose soit envoyé à la fois à l'ordinateur
-//static BSEMAPHORE_DECL(sendToComputer_sem, TRUE);
 
 //2 times FFT_SIZE because these arrays contain complex numbers (real + imaginary)
 //Tableau contenant les echantillons de chaque micro
@@ -37,6 +33,7 @@ static float micBack_output[FFT_SIZE];
 #define MAX_FREQ			30	//we don't analyze after this index to not use resources for nothing
 #define NO_SOUND			4
 #define REMOTE_FREQ			26 // 406 Hz
+
 #define REMOTE_FREQ_H		(REMOTE_FREQ+3)
 #define REMOTE_FREQ_L		(REMOTE_FREQ-3)
 
@@ -55,26 +52,12 @@ static float micBack_output[FFT_SIZE];
 #define FREQ_BACKWARD_L		(FREQ_BACKWARD-1)
 #define FREQ_BACKWARD_H		(FREQ_BACKWARD+1)
 
-#define TOLERANCE_FRONT		10000
-#define TOLERANCE_BACK		5000
-
 #define SOUND_OFF	0
 #define SOUND_ON	1
 
-#define MAX_IR_VALUE	200
-#define NB_IR_SENSORS	8
-#define IR_20_RIGHT		0
-#define IR_50_RIGHT		1
-#define IR_90_RIGHT		2
-#define IR_160_RIGHT	3
-#define IR_160_LEFT		4
-#define IR_90_LEFT		5
-#define IR_50_LEFT		6
-#define IR_20_LEFT		7
-#define PAS_D_OBSTACLE 	0
+#define PAS_D_OBSTACLE	0
 
 static uint8_t state = SOUND_OFF;
-static bool obstacle = false;
 
 // Simple delay function
 void delay(unsigned int n)
@@ -150,89 +133,26 @@ void sound_manuel_remote(float* data)
 
 }
 */
-/*
-*	Callback called when the demodulation of the four microphones is done.
-*	We get 160 samples per mic every 10ms (16kHz)
-*
-*	params :
-*	int16_t *data			Buffer containing 4 times 160 samples. the samples are sorted by micro
-*							so we have [micRight1, micLeft1, micBack1, micFront1, micRight2, etc...]
-*	uint16_t num_samples	Tells how many data we get in total (should always be 640)
-*/
 
 //Collecte les données pour chaque micro, détecte quel micro reçoit un signal maximum
 //appelle la fonction de commande des moteurs.
 void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 {
-
-	/*
-	*
-	*	We get 160 samples per mic every 10ms
-	*	So we fill the samples buffers to reach
-	*	1024 samples, then we compute the FFTs.
-	*
-	*/
-	//chprintf((BaseSequentialStream *)&SD3, "je suis dans processAudioData");
 	static uint16_t nb_samples = 0;
-	static float mag_max[NB_MIC] = {MIN_VALUE_THRESHOLD};
-	static float val_mag_max = 0;
-
-	static uint8_t active_mic_first = NO_SOUND;
-	static uint8_t active_mic_second = NO_SOUND;
-
-	uint16_t ir_sensor[NB_IR_SENSORS] = {0};
-	uint8_t max_ir_value = 0;
-	uint8_t ir_sensor_nb = 0;
-	uint8_t type_obstacle = PAS_D_OBSTACLE;
-
-	//pour mettre les valeurs des IR dans le tableau et les transmettre à la fonction suivante
-	for(uint8_t i = 0; i < NB_IR_SENSORS; i++)
-	{
-		ir_sensor[i] = get_prox(i);
-	}
-
-	max_ir_value = ir_sensor[IR_20_RIGHT];
-	ir_sensor_nb = IR_20_RIGHT;
-
-	//concerver la plus haute valeur
-	for(uint8_t i = 1; i < NB_IR_SENSORS; i++)
-	{
-		if(ir_sensor[i] > max_ir_value)
-		{
-			max_ir_value = ir_sensor[i];
-			ir_sensor_nb = i;
-		}
-	}
-	//vérification si l'une des valeurs est trop grande
-	if(max_ir_value > MAX_IR_VALUE)
-	{
-		obstacle = true;
-		//condition manuel/automatique
-		lieu_obstacle(ir_sensor_nb);
-		capture_image();
-		//on peut facilement définir la taille de l'obstacle car on sait à quelle distance on en est
-		type_obstacle = process_image();
-		contourne_obstacle(type_obstacle);
-		//fréquence haute pour stop le mode manuel
-		obstacle = false;
-	}
 
 	//loop to fill the buffers
 	for(uint16_t i = 0 ; i < num_samples ; i+=4)
 	{
-		//chprintf((BaseSequentialStream *)&SDU1, "premiere boucle for pour remplir les tableaux");
 		//construct an array of complex numbers. Put 0 to the imaginary part
 		micRight_cmplx_input[nb_samples] = (float)data[i + MIC_RIGHT];
 		micLeft_cmplx_input[nb_samples] = (float)data[i + MIC_LEFT];
 		micBack_cmplx_input[nb_samples] = (float)data[i + MIC_BACK];
-		//micFront_cmplx_input[nb_samples] = (float)data[i + MIC_FRONT];
 
 		nb_samples++;
 
 		micRight_cmplx_input[nb_samples] = 0;
 		micLeft_cmplx_input[nb_samples] = 0;
 		micBack_cmplx_input[nb_samples] = 0;
-		//micFront_cmplx_input[nb_samples] = 0;
 
 		nb_samples++;
 
@@ -245,24 +165,10 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 
 	if(nb_samples >= (2 * FFT_SIZE))
 	{
-		//chprintf((BaseSequentialStream *)&SD3, "premier if pour fft");
-		/*	FFT proccessing
-		*
-		*	This FFT function stores the results in the input buffer given.
-		*	This is an "In Place" function.
-		*/
-
 		doFFT_optimized(FFT_SIZE, micRight_cmplx_input);
 		doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
 		doFFT_optimized(FFT_SIZE, micBack_cmplx_input);
 
-		/*	Magnitude processing
-		*
-		*	Computes the magnitude of the complex numbers and
-		*	stores them in a buffer of FFT_SIZE because it only contains
-		*	real numbers.
-		*
-		*/
 		arm_cmplx_mag_f32(micRight_cmplx_input, micRight_output, FFT_SIZE);
 		arm_cmplx_mag_f32(micLeft_cmplx_input, micLeft_output, FFT_SIZE);
 		arm_cmplx_mag_f32(micBack_cmplx_input, micBack_output, FFT_SIZE);
@@ -275,39 +181,7 @@ void processAudioData(int16_t *data, uint16_t num_samples)//, int mode)
 		}
 		else
 		{*/
-		mag_max[MIC_RIGHT] = max_magnitude_define(micRight_output);
-		mag_max[MIC_LEFT] = max_magnitude_define(micLeft_output);
-		mag_max[MIC_BACK] = max_magnitude_define(micBack_output);
-		//mag_max[MIC_FRONT] = max_magnitude_define(micFront_output);
-
-		if((mag_max[MIC_RIGHT]<=MIN_VALUE_THRESHOLD) && (mag_max[MIC_LEFT]<=MIN_VALUE_THRESHOLD) && (mag_max[MIC_BACK]<=MIN_VALUE_THRESHOLD))
-		{
-			state = SOUND_OFF;
-		}
-		else {state = SOUND_ON;}
-
-		val_mag_max = MIN_VALUE_THRESHOLD;
-
-		for(uint16_t i = 0; i< NB_MIC ; i++)
-		{
-			if (mag_max[i] > val_mag_max)
-			{
-				active_mic_first = i;
-				val_mag_max = mag_max[i];
-			}
-		}
-
-		val_mag_max = MIN_VALUE_THRESHOLD;
-
-		for(int16_t i = 0; i< NB_MIC ; i++)
-		{
-			if(i != active_mic_first && mag_max[i] > val_mag_max)
-			{
-				active_mic_second = i;
-				val_mag_max = mag_max[i];
-			}
-		}
-		sound_remote(active_mic_first, active_mic_second);
+		//sound_remote();
 	}
 }
 
@@ -345,8 +219,48 @@ float* get_audio_buffer_ptr(BUFFER_NAME_t name)
 }
 
 //Décide du déplacement selon le micro dominant
-void sound_remote(uint8_t active_mic_first, uint8_t active_mic_second)
+void sound_remote(void)
 {
+	static float mag_max[NB_MIC] = {MIN_VALUE_THRESHOLD};
+	static float val_mag_max = 0;
+
+	static uint8_t active_mic_first = NO_SOUND;
+	static uint8_t active_mic_second = NO_SOUND;
+
+	mag_max[MIC_RIGHT] = max_magnitude_define(micRight_output);
+	mag_max[MIC_LEFT] = max_magnitude_define(micLeft_output);
+	mag_max[MIC_BACK] = max_magnitude_define(micBack_output);
+
+	if((mag_max[MIC_RIGHT]<=MIN_VALUE_THRESHOLD) && (mag_max[MIC_LEFT]<=MIN_VALUE_THRESHOLD) && (mag_max[MIC_BACK]<=MIN_VALUE_THRESHOLD))
+	{
+		state = SOUND_OFF;
+	}
+	else
+	{
+		state = SOUND_ON;
+	}
+
+	val_mag_max = MIN_VALUE_THRESHOLD;
+
+	for(uint16_t i = 0; i< NB_MIC ; i++)
+	{
+		if (mag_max[i] > val_mag_max)
+		{
+			active_mic_first = i;
+			val_mag_max = mag_max[i];
+		}
+	}
+
+	val_mag_max = MIN_VALUE_THRESHOLD;
+
+	for(int16_t i = 0; i< NB_MIC ; i++)
+	{
+		if(i != active_mic_first && mag_max[i] > val_mag_max)
+		{
+			active_mic_second = i;
+			val_mag_max = mag_max[i];
+		}
+	}
 	//go forward
 	if(((active_mic_first == MIC_LEFT) && (active_mic_second == MIC_RIGHT)) || ((active_mic_first == MIC_RIGHT) && (active_mic_second == MIC_LEFT) ))
 	{
@@ -385,6 +299,7 @@ void sound_remote(uint8_t active_mic_first, uint8_t active_mic_second)
 	}
 
 }
+
 uint8_t get_state(void)
 {
 	return state;
