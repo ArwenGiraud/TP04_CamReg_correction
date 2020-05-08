@@ -26,7 +26,7 @@
 //paramètres du moteur et camera
 #define VITESSE_LENTE		300
 #define ARRET				0
-#define ESPACE				4 //cm
+#define ESPACE				5 //cm
 #define PI                  3.1415926536f
 #define WHEEL_DISTANCE      5.5f    //cm
 #define PERIMETER_EPUCK     (PI * WHEEL_DISTANCE)

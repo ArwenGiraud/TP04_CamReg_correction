@@ -13,11 +13,11 @@
 #define LIMITE 20
 
 #define MAX_WIDHT			500 //camera fait 640 pixels
-#define DIST_CAM			770 //772.55 mais on arrondit, pas besoin de cette précision
-#define ESPACE				4 //cm
-#define RAPPORT1CM			(DIST_CAM/(ESPACE+1)) //154pxl
-#define RAPPORT3CM			((DIST_CAM/(ESPACE+1))*3) //462pxl
-#define MOYENNE				((RAPPORT1CM + RAPPORT3CM)/2)	//308pxl
+#define DIST_CAM			774 //772.55 mais on arrondit, pas besoin de cette précision
+#define ESPACE				5 //cm
+#define RAPPORT1CM			(DIST_CAM/(ESPACE+1)) //129pxl
+#define RAPPORT3CM			((DIST_CAM/(ESPACE+1))*3) //387pxl
+#define MOYENNE				((RAPPORT1CM + RAPPORT3CM)/2)	//258pxl
 
 #define ERREUR 			0
 #define PETIT_OBSTACLE	1	//diamètre 2cm
