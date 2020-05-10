@@ -19,13 +19,11 @@
 //Tableau contenant les echantillons de chaque micro
 static float micLeft_cmplx_input[2 * FFT_SIZE];
 static float micRight_cmplx_input[2 * FFT_SIZE];
-static float micFront_cmplx_input[2 * FFT_SIZE];
 static float micBack_cmplx_input[2 * FFT_SIZE];
 //Arrays containing the computed magnitude of the complex numbers
 //Même tableau mais pour la sortie => donc sous forme de magnitude
 static float micLeft_output[FFT_SIZE];
 static float micRight_output[FFT_SIZE];
-static float micFront_output[FFT_SIZE];
 static float micBack_output[FFT_SIZE];
 
 #define MIN_VALUE_THRESHOLD	35000 //A AUGMENTER SI BOUGE QUAND IL N'Y A PAS DE FREQUENCE A 250 Hz

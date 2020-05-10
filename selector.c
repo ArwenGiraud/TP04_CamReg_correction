@@ -24,11 +24,10 @@ void init_selector(void)
 
 uint8_t get_selector_mode(void)
 {
-    int selector, old_selector = 0;
+    int selector = 0;
     uint8_t mode = NORMAL;
 	selector = gpio_read(Sel0) + 2 * gpio_read(Sel1) + 4 * gpio_read(Sel2) + 8 * gpio_read(Sel3);
 
-    old_selector = selector;
     switch (selector)
    	{
     	case 0:
